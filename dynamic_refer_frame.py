@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-10-31 14:49:11
-LastEditTime: 2021-11-04 20:00:27
+LastEditTime: 2021-11-04 20:34:50
 LastEditors: Please set LastEditors
 Description: 有机结合局部搜索和全局搜索
 FilePath: \dynamic_refers\dynamic_refer_frame.py
@@ -127,70 +127,27 @@ def dynamic_refers(videoname='drift-straight'):
             
             ref_index = [0] + list(filter(lambda x: x > 0, range(target_frame-1, target_frame -1- mem_gap * 3, -mem_gap)))[::-1]
 
-            #rgb_0 = [images_rgb[ind] for ind in ref_index]
-            rgb_1 = images_rgb[target_frame] # 待预测的帧
-            #anno_0 = [outputs[ind] for ind in ref_index]
-
-
-            l_rgb_0 = [images_rgb[ind] for ind in long_ref_index]
-            # l_rgb_1 = images_rgb[target_frame] # 待预测的帧
-            l_anno_0 = [outputs[ind] for ind in long_ref_index]
-
-            s_rgb_0 = [images_rgb[ind] for ind in short_ref_index]
-            # s_rgb_1 = images_rgb[target_frame] # 待预测的帧
-            s_anno_0 = [outputs[ind] for ind in short_ref_index]
-
-
-            _, _, h, w = l_anno_0[0].size()
+            
             with torch.no_grad():
-                # i帧，i帧的mask，i+1帧
-                # ref_index=[0,5,i-4,i-2,i]
-                # 预测i+1帧的mask
-
-                # 如果参考帧和当前帧的差>dil_int，则开始全局搜索
-                # if target_frame < 16:
-                #     _output = model(rgb_0, anno_0, rgb_1, ref_index, target_frame, 4)
-                # else:
-                #     _output = model(rgb_0, anno_0, rgb_1, ref_index, target_frame, 15)
+                
                 if target_frame < 5:
-                    rgb_0 = [images_rgb[ind] for ind in ref_index]
-                    rgb_1 = images_rgb[target_frame] # 待预测的帧
-                    anno_0 = [outputs[ind] for ind in ref_index]
-                    _, _, h, w = anno_0[0].size()
-                    
-                    _output = model(rgb_0, anno_0, rgb_1, ref_index, target_frame, 15)
-                    _output = F.interpolate(_output, (h,w), mode='bilinear', align_corners=True)
-                    output = torch.argmax(_output, 1, keepdim=True).float()
+                
+                    out_img, output = get_anno_by_ref(model, outputs, images_rgb, ref_index, target_frame, 15)
                     outputs.append(output)
-
-                    output_file = os.path.join(output_folder, '%s.png' % str(target_frame).zfill(5))
-                    out_img = output[0, 0].cpu().numpy().astype(np.uint8)
-                    out_img = np.pad(out_img, pad, 'edge').astype(np.uint8)
                     
                     label_num[target_frame] = len(out_img[out_img>0])
+                    output_file = os.path.join(output_folder, '%s.png' % str(target_frame).zfill(5))
                     imwrite_indexed(output_file, out_img)
                 else:
                     # 长期记忆的结果
-                    # _long_output = model(l_rgb_0, l_anno_0, rgb_1, long_ref_index, target_frame, min(target_frame-long_ref_index[0]-1,15))
-                    long_out_img = test(model, outputs, images_rgb, long_ref_index, target_frame, min(target_frame-long_ref_index[0]-1,15))
-                    # _long_output = F.interpolate(_long_output, (h,w), mode='bilinear', align_corners=True)
-                    # long_output = torch.argmax(_long_output, 1, keepdim=True).float()
-                    
-                    # long_out_img = test(long_ref_index, target_frame, model, images_rgb, outputs, min(target_frame-long_ref_index[0]-1,15))
+                    long_out_img, _ = get_anno_by_ref(model, outputs, images_rgb, long_ref_index, target_frame, min(target_frame-long_ref_index[0]-1,15))
                     output_file = os.path.join(output_folder, 'long_%s.png' % str(target_frame).zfill(5))
-                    # long_out_img = long_output[0, 0].cpu().numpy().astype(np.uint8)
-                    # long_out_img = np.pad(long_out_img, pad, 'edge').astype(np.uint8)
                     imwrite_indexed(output_file, long_out_img)
 
                     # 短期记忆的结果
-                    #_short_output = model(s_rgb_0, s_anno_0, rgb_1, short_ref_index, target_frame, 15)
-                    #_short_output = F.interpolate(_short_output, (h,w), mode='bilinear', align_corners=True)
-                    #short_output = torch.argmax(_short_output, 1, keepdim=True).float()
+                    short_out_img, _ = get_anno_by_ref(model, outputs, images_rgb, short_ref_index, target_frame, 15)
 
                     output_file = os.path.join(output_folder, 'short_%s.png' % str(target_frame).zfill(5))
-                    short_out_img = test(model, outputs, images_rgb, short_ref_index, target_frame, 15)
-                    #short_out_img = short_output[0, 0].cpu().numpy().astype(np.uint8)
-                    #short_out_img = np.pad(short_out_img, pad, 'edge').astype(np.uint8)
                     imwrite_indexed(output_file, short_out_img)
                     
                     IoU, ratio, l_num, s_num = quality_of_long_memory(long_out_img, short_out_img)
@@ -204,34 +161,17 @@ def dynamic_refers(videoname='drift-straight'):
                     #elif IoU < 0.5:
                     #    print('IoU<0.5重新选择参考帧')
                         
-                    rgb_0 = [images_rgb[ind] for ind in ref_index]
-                    rgb_1 = images_rgb[target_frame] # 待预测的帧
-                    anno_0 = [outputs[ind] for ind in ref_index]
-                    _, _, h, w = anno_0[0].size()
                     
-                    #tmp = target_frame - long_ref_index[0] - 1
-                    #dil = tmp # if tmp < 15 else 15
-                    _output = model(rgb_0, anno_0, rgb_1, ref_index, target_frame, 15)
-                    _output = F.interpolate(_output, (h,w), mode='bilinear', align_corners=True)
-                    output = torch.argmax(_output, 1, keepdim=True).float()
+                    out_img, output = get_anno_by_ref(model, outputs, images_rgb, ref_index, target_frame, 15)
                     outputs.append(output)
 
-                    output_file = os.path.join(output_folder, '%s.png' % str(target_frame).zfill(5))
-                    out_img = output[0, 0].cpu().numpy().astype(np.uint8)
-                    out_img = np.pad(out_img, pad, 'edge').astype(np.uint8)
-                    
                     label_num[target_frame] = len(out_img[out_img>0])
+                    output_file = os.path.join(output_folder, '%s.png' % str(target_frame).zfill(5))
                     imwrite_indexed(output_file, out_img)
                     
-            # output_file = os.path.join(output_folder, '%s.png' % str(target_frame).zfill(5))
-            # out_img = output[0, 0].cpu().numpy().astype(np.uint8)
-            # out_img = np.pad(out_img, pad, 'edge').astype(np.uint8)
-            
-            # label_num[target_frame] = len(out_img[out_img>0])
-            # imwrite_indexed(output_file, out_img)
         print(label_num)
 
-def test(model, outputs, images_rgb, long_ref_index, target_frame, dil_int):
+def get_anno_by_ref(model, outputs, images_rgb, long_ref_index, target_frame, dil_int):
     
     pad =  ((0,0), (0,0))
     
@@ -246,26 +186,9 @@ def test(model, outputs, images_rgb, long_ref_index, target_frame, dil_int):
 
     long_out_img = long_output[0, 0].cpu().numpy().astype(np.uint8)
     long_out_img = np.pad(long_out_img, pad, 'edge').astype(np.uint8)
-    return long_out_img
+    return long_out_img, long_output
 
 
-
-def get_anno_by_ref(ref_index, tar, model, images_rgb, outputs, dil_int=15):
-    # print(ref_index)
-    rgb_0 = [images_rgb[ind] for ind in ref_index]
-    rgb_1 = images_rgb[tar] # 待预测的帧
-    anno_0 = [outputs[ind] for ind in ref_index]
-    _, _, h, w = anno_0[0].size()
-                    
-    _output = model(rgb_0, anno_0, rgb_1, ref_index, tar, dil_int)
-    _output = F.interpolate(_output, (h,w), mode='bilinear', align_corners=True)
-    output = torch.argmax(_output, 1, keepdim=True).float()
-    # outputs.append(output)
-
-    pad =  ((0,0), (0,0))
-    out_img = output[0, 0].cpu().numpy().astype(np.uint8)
-    out_img = np.pad(out_img, pad, 'edge').astype(np.uint8)
-    return output, out_img
 
 if __name__ == '__main__':
 
@@ -285,4 +208,5 @@ if __name__ == '__main__':
     #        get_next_anno(videoname=vn, frames=frame_arr, target_frame=tar)
     # for vn in vns:
     dynamic_refers('goat')
+
     
