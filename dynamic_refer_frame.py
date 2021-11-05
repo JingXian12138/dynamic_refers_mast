@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-10-31 14:49:11
-LastEditTime: 2021-11-04 20:34:50
+LastEditTime: 2021-11-05 14:19:30
 LastEditors: Please set LastEditors
 Description: 有机结合局部搜索和全局搜索
 FilePath: \dynamic_refers\dynamic_refer_frame.py
@@ -125,7 +125,7 @@ def dynamic_refers(videoname='drift-straight'):
             mem_gap = 2
             short_ref_index = list(filter(lambda x: x > 0, range(target_frame-1, target_frame -1- mem_gap * 3, -mem_gap)))[::-1]
             
-            ref_index = [0] + list(filter(lambda x: x > 0, range(target_frame-1, target_frame -1- mem_gap * 3, -mem_gap)))[::-1]
+            ref_index = long_ref_index + list(filter(lambda x: x > 0, range(target_frame-1, target_frame -1- mem_gap * 3, -mem_gap)))[::-1]
 
             
             with torch.no_grad():
@@ -141,27 +141,41 @@ def dynamic_refers(videoname='drift-straight'):
                 else:
                     # 长期记忆的结果
                     long_out_img, _ = get_anno_by_ref(model, outputs, images_rgb, long_ref_index, target_frame, min(target_frame-long_ref_index[0]-1,15))
-                    output_file = os.path.join(output_folder, 'long_%s.png' % str(target_frame).zfill(5))
-                    imwrite_indexed(output_file, long_out_img)
-
                     # 短期记忆的结果
                     short_out_img, _ = get_anno_by_ref(model, outputs, images_rgb, short_ref_index, target_frame, 15)
-
-                    output_file = os.path.join(output_folder, 'short_%s.png' % str(target_frame).zfill(5))
-                    imwrite_indexed(output_file, short_out_img)
-                    
+                    # 计算指标
                     IoU, ratio, l_num, s_num = quality_of_long_memory(long_out_img, short_out_img)
                     print(target_frame, ': ',IoU, ratio, l_num, s_num)
                     f.write(str(target_frame).zfill(2) + ': ' + str(IoU)+','+str(ratio)+','+str(l_num)\
                         +','+str(s_num)+'\n')
-                    # 最终进行预测
-                    # if IoU > 0.9 and 1.05 > ratio and ratio > 0.9:
-                    #     print('#############')
-                    #     ref_index = long_ref_index
-                    #elif IoU < 0.5:
-                    #    print('IoU<0.5重新选择参考帧')
-                        
                     
+                    if IoU > 0.9 and 1.05 > ratio and ratio > 0.9:
+                        print('#############')
+                        ref_index = long_ref_index
+                    elif IoU < 0.4:
+                        print('IoU<0.4重新选择参考帧')
+                        for i in range(0, target_frame - 6):
+                            tmp = [i]
+                            dil = min(target_frame-long_ref_index[0]-1,15)
+                            long_out_img, _ = get_anno_by_ref(model, outputs, images_rgb, tmp, target_frame, dil)
+                            IoU_n, ratio_n, l_num_n, s_num_n = quality_of_long_memory(long_out_img, short_out_img)
+                            dev = np.abs(IoU - ratio_n)
+                            if IoU_n > IoU and ratio_n > 0.8 and ratio_n < 1.1 and np.abs(IoU_n-ratio_n) < dev:
+                                dev = np.abs(IoU_n-ratio_n)
+                                print('new IoU ', IoU_n)
+                                long_ref_index = [i]
+                                # output_file = os.path.join(output_folder, 'long_%s.png' % str(target_frame).zfill(5))
+                                # imwrite_indexed(output_file, long_tmp_img)
+                                ref_index = long_ref_index + short_ref_index
+                    
+
+                    long_output_file = os.path.join(output_folder, 'long_%s.png' % str(target_frame).zfill(5))
+                    imwrite_indexed(long_output_file, long_out_img)
+                    short_output_file = os.path.join(output_folder, 'short_%s.png' % str(target_frame).zfill(5))
+                    imwrite_indexed(short_output_file, short_out_img)
+
+                    # 最终进行预测
+                    print(target_frame, ': ', ref_index)
                     out_img, output = get_anno_by_ref(model, outputs, images_rgb, ref_index, target_frame, 15)
                     outputs.append(output)
 
