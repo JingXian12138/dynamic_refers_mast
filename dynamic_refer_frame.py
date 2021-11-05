@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-10-31 14:49:11
-LastEditTime: 2021-11-05 14:19:30
+LastEditTime: 2021-11-05 14:34:01
 LastEditors: Please set LastEditors
 Description: 有机结合局部搜索和全局搜索
 FilePath: \dynamic_refers\dynamic_refer_frame.py
@@ -167,6 +167,9 @@ def dynamic_refers(videoname='drift-straight'):
                                 # output_file = os.path.join(output_folder, 'long_%s.png' % str(target_frame).zfill(5))
                                 # imwrite_indexed(output_file, long_tmp_img)
                                 ref_index = long_ref_index + short_ref_index
+                    elif 0.9> IoU and IoU > 0.6 and ratio > 0.9:
+                        # 有一定重合但是很可能散布到了背景上
+                        print('grabcut')
                     
 
                     long_output_file = os.path.join(output_folder, 'long_%s.png' % str(target_frame).zfill(5))
