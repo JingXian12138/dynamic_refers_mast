@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-10-31 14:49:11
-LastEditTime: 2021-11-06 15:15:49
+LastEditTime: 2021-11-06 18:44:08
 LastEditors: Please set LastEditors
 Description: 有机结合局部搜索和全局搜索
 FilePath: \dynamic_refers\dynamic_refer_frame.py
@@ -126,6 +126,8 @@ def dynamic_refers(videoname='drift-straight'):
                 
                     out_img, output = get_anno_by_ref(model, outputs, images_rgb, ref_index, target_frame, 15)
                     outputs.append(output)
+                    print(type(output))
+                    print(output.shape)
                     
                     label_num[target_frame] = len(out_img[out_img>0])
                     output_file = os.path.join(output_folder, '%s.png' % str(target_frame).zfill(5))
@@ -141,9 +143,10 @@ def dynamic_refers(videoname='drift-straight'):
                     f.write(str(target_frame).zfill(2) + ': ' + str(IoU)+','+str(ratio)+','+str(l_num)\
                         +','+str(s_num)+'\n')
                     
+                    flag = False
                     if IoU > 0.9 and 1.05 > ratio and ratio > 0.9:
                         print('#############')
-                        ref_index = long_ref_index
+                        ref_index = long_ref_index 
                     elif IoU < 0.4:
                         print('IoU<0.4重新选择参考帧')
                         for i in range(0, target_frame - 6):
@@ -162,16 +165,15 @@ def dynamic_refers(videoname='drift-straight'):
                     elif 0.7> IoU and IoU > 0.2 and ratio > 0.9:
                         # 有一定重合但是很可能散布到了背景上
                         print('grabcut: ', target_frame)
-                        img = plt.imread(TrainData[0][0][target_frame])
-                        # img = images_rgb[target_frame]
-                        # img = img.squeeze(0)
-                        # img = img.permute(1,2,0)
-                        # print(img.shape)
-                        # img = img.cpu().numpy().astype(np.uint8)
-                        # print(type(img[0][0][0]))
+                        img = plt.imread(TrainData[1][0][target_frame])
                         mask_grab = myGrabcut.my_grabcut(img, long_out_img, short_out_img)
+                        print('mask_grab shape', mask_grab.shape)
                         grab_output_file = os.path.join(output_folder, 'grab_%s.png' % str(target_frame).zfill(5))
                         imwrite_indexed(grab_output_file, mask_grab)
+                        
+                        mask_grab_output = torch.Tensor(mask_grab)
+                        mask_grab_output = mask_grab_output.unsqueeze(0).unsqueeze(0)
+                        flag = True
                     
 
                     long_output_file = os.path.join(output_folder, 'long_%s.png' % str(target_frame).zfill(5))
@@ -180,10 +182,15 @@ def dynamic_refers(videoname='drift-straight'):
                     imwrite_indexed(short_output_file, short_out_img)
 
                     # 最终进行预测
-                    print(target_frame, ': ', ref_index)
-                    out_img, output = get_anno_by_ref(model, outputs, images_rgb, ref_index, target_frame, 15)
+                    if flag:
+                        print(target_frame, ' mask_grab')
+                        out_img = mask_grab
+                        output = mask_grab_output
+                    else:
+                        print(target_frame, ': ', ref_index)
+                        out_img, output = get_anno_by_ref(model, outputs, images_rgb, ref_index, target_frame, 15)
+                        
                     outputs.append(output)
-
                     label_num[target_frame] = len(out_img[out_img>0])
                     output_file = os.path.join(output_folder, '%s.png' % str(target_frame).zfill(5))
                     imwrite_indexed(output_file, out_img)
@@ -230,6 +237,6 @@ if __name__ == '__main__':
     
     # filepath = '/dataset/dusen/DAVIS/'
     # TrainData = _dataloader(filepath, 'goat')
-    # print(TrainData[0][0][33])
+    # print(TrainData[1][0][33])
 
     
