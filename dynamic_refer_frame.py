@@ -1,31 +1,19 @@
 '''
 Author: your name
 Date: 2021-10-31 14:49:11
-LastEditTime: 2021-11-05 14:34:01
+LastEditTime: 2021-11-06 15:15:49
 LastEditors: Please set LastEditors
 Description: 有机结合局部搜索和全局搜索
 FilePath: \dynamic_refers\dynamic_refer_frame.py
 '''
-import matplotlib.pyplot as plt
-from skimage import io
-# 导入必要的包
-import skimage.segmentation as seg
-from skimage.util import img_as_float
 
-from PIL import Image
+
 import numpy as np
-
-import scipy.io
-import numpy as np
-
-import functional.feeder.dataset.Davis2017tmp as D
 import functional.feeder.dataset.DavisLoaderLab as DL
 from functional.utils.io import imwrite_indexed
-import myAnnoLoader
 
 import argparse
 import os
-import cv2
 from models.mast import MAST
 import torch
 import torch.nn as nn
@@ -33,6 +21,10 @@ import torch.nn.parallel
 import torch.nn.functional as F
 import torch.backends.cudnn
 import numpy as np
+import myGrabcut
+import matplotlib.pyplot as plt
+
+
 
 def _dataloader(filepath, videoname):
     catnames = [videoname]
@@ -167,9 +159,19 @@ def dynamic_refers(videoname='drift-straight'):
                                 # output_file = os.path.join(output_folder, 'long_%s.png' % str(target_frame).zfill(5))
                                 # imwrite_indexed(output_file, long_tmp_img)
                                 ref_index = long_ref_index + short_ref_index
-                    elif 0.9> IoU and IoU > 0.6 and ratio > 0.9:
+                    elif 0.7> IoU and IoU > 0.2 and ratio > 0.9:
                         # 有一定重合但是很可能散布到了背景上
-                        print('grabcut')
+                        print('grabcut: ', target_frame)
+                        img = plt.imread(TrainData[0][0][target_frame])
+                        # img = images_rgb[target_frame]
+                        # img = img.squeeze(0)
+                        # img = img.permute(1,2,0)
+                        # print(img.shape)
+                        # img = img.cpu().numpy().astype(np.uint8)
+                        # print(type(img[0][0][0]))
+                        mask_grab = myGrabcut.my_grabcut(img, long_out_img, short_out_img)
+                        grab_output_file = os.path.join(output_folder, 'grab_%s.png' % str(target_frame).zfill(5))
+                        imwrite_indexed(grab_output_file, mask_grab)
                     
 
                     long_output_file = os.path.join(output_folder, 'long_%s.png' % str(target_frame).zfill(5))
@@ -225,5 +227,9 @@ if __name__ == '__main__':
     #        get_next_anno(videoname=vn, frames=frame_arr, target_frame=tar)
     # for vn in vns:
     dynamic_refers('goat')
+    
+    # filepath = '/dataset/dusen/DAVIS/'
+    # TrainData = _dataloader(filepath, 'goat')
+    # print(TrainData[0][0][33])
 
     
