@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-10-31 14:49:11
-LastEditTime: 2021-11-06 18:44:08
+LastEditTime: 2021-11-06 22:15:03
 LastEditors: Please set LastEditors
 Description: 有机结合局部搜索和全局搜索
 FilePath: \dynamic_refers\dynamic_refer_frame.py
@@ -146,7 +146,7 @@ def dynamic_refers(videoname='drift-straight'):
                     flag = False
                     if IoU > 0.9 and 1.05 > ratio and ratio > 0.9:
                         print('#############')
-                        ref_index = long_ref_index 
+                        ref_index = long_ref_index + long_ref_index+[target_frame-3]
                     elif IoU < 0.4:
                         print('IoU<0.4重新选择参考帧')
                         for i in range(0, target_frame - 6):
@@ -156,24 +156,26 @@ def dynamic_refers(videoname='drift-straight'):
                             IoU_n, ratio_n, l_num_n, s_num_n = quality_of_long_memory(long_out_img, short_out_img)
                             dev = np.abs(IoU - ratio_n)
                             if IoU_n > IoU and ratio_n > 0.8 and ratio_n < 1.1 and np.abs(IoU_n-ratio_n) < dev:
+                                IoU = IoU_n
+                                ratio = ratio_n
                                 dev = np.abs(IoU_n-ratio_n)
                                 print('new IoU ', IoU_n)
                                 long_ref_index = [i]
                                 # output_file = os.path.join(output_folder, 'long_%s.png' % str(target_frame).zfill(5))
                                 # imwrite_indexed(output_file, long_tmp_img)
                                 ref_index = long_ref_index + short_ref_index
-                    elif 0.7> IoU and IoU > 0.2 and ratio > 0.9:
+                    #elif 0.7> IoU and IoU > 0.2 and ratio > 0.9:
                         # 有一定重合但是很可能散布到了背景上
-                        print('grabcut: ', target_frame)
-                        img = plt.imread(TrainData[1][0][target_frame])
-                        mask_grab = myGrabcut.my_grabcut(img, long_out_img, short_out_img)
-                        print('mask_grab shape', mask_grab.shape)
-                        grab_output_file = os.path.join(output_folder, 'grab_%s.png' % str(target_frame).zfill(5))
-                        imwrite_indexed(grab_output_file, mask_grab)
+                    #    print('grabcut: ', target_frame)
+                    #    img = plt.imread(TrainData[1][0][target_frame])
+                    #    mask_grab = myGrabcut.my_grabcut(img, long_out_img, short_out_img)
+                    #    print('mask_grab shape', mask_grab.shape)
+                    #    grab_output_file = os.path.join(output_folder, 'grab_%s.png' % str(target_frame).zfill(5))
+                    #    imwrite_indexed(grab_output_file, mask_grab)
                         
-                        mask_grab_output = torch.Tensor(mask_grab)
-                        mask_grab_output = mask_grab_output.unsqueeze(0).unsqueeze(0)
-                        flag = True
+                    #    mask_grab_output = torch.Tensor(mask_grab)
+                    #    mask_grab_output = mask_grab_output.unsqueeze(0).unsqueeze(0)
+                    #     flag = True
                     
 
                     long_output_file = os.path.join(output_folder, 'long_%s.png' % str(target_frame).zfill(5))

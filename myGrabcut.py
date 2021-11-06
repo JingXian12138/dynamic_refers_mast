@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-10-29 15:24:37
-LastEditTime: 2021-11-06 19:25:02
+LastEditTime: 2021-11-06 21:33:14
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: \GraphCut\img_cut.py
@@ -27,11 +27,12 @@ def my_grabcut(img, long_m, short_m):
     mask = blend_mask(long_m, short_m)
 
     mask, bgdModel, fgdModel = cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
+
+    plt.figure()
+    plt.imshow(mask)
     mask[mask==2] = 0
     mask[mask>0] = 1
-    # plt.figure()
-    # plt.imshow(mask)
-    # plt.show()
+ 
     return mask
 
 def blend_mask(long_m, short_m):
@@ -51,8 +52,8 @@ def blend_mask(long_m, short_m):
     
     res = np.where(index_s)
 
-    # plt.figure()
-    # plt.imshow(map)
+    plt.figure('标注的结果')
+    plt.imshow(map)
 
     h, w = map.shape
     r = 7
@@ -71,10 +72,11 @@ def blend_mask(long_m, short_m):
     return map
 
 if __name__ == '__main__':
-    img = plt.imread('./resource/00082.jpg')
+    img = plt.imread('./resource/00089.jpg')
     
-    long_m = read_annotation('./resource/long_00082.png')
-    short_m = read_annotation('./resource/short_00082.png')
+    long_m = read_annotation('./resource/long_00089.png')
+    short_m = read_annotation('./resource/short_00089.png')
     mask = my_grabcut(img, long_m, short_m)
+    plt.figure()
     plt.imshow(mask)
     plt.show()
