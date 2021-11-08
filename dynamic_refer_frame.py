@@ -1,31 +1,19 @@
 '''
 Author: your name
 Date: 2021-10-31 14:49:11
-LastEditTime: 2021-11-05 14:34:01
+LastEditTime: 2021-11-08 15:57:34
 LastEditors: Please set LastEditors
 Description: 有机结合局部搜索和全局搜索
 FilePath: \dynamic_refers\dynamic_refer_frame.py
 '''
-import matplotlib.pyplot as plt
-from skimage import io
-# 导入必要的包
-import skimage.segmentation as seg
-from skimage.util import img_as_float
 
-from PIL import Image
+
 import numpy as np
-
-import scipy.io
-import numpy as np
-
-import functional.feeder.dataset.Davis2017tmp as D
 import functional.feeder.dataset.DavisLoaderLab as DL
 from functional.utils.io import imwrite_indexed
-import myAnnoLoader
 
 import argparse
 import os
-import cv2
 from models.mast import MAST
 import torch
 import torch.nn as nn
@@ -33,6 +21,10 @@ import torch.nn.parallel
 import torch.nn.functional as F
 import torch.backends.cudnn
 import numpy as np
+import myGrabcut
+import matplotlib.pyplot as plt
+
+
 
 def _dataloader(filepath, videoname):
     catnames = [videoname]
@@ -134,6 +126,8 @@ def dynamic_refers(videoname='drift-straight'):
                 
                     out_img, output = get_anno_by_ref(model, outputs, images_rgb, ref_index, target_frame, 15)
                     outputs.append(output)
+                    print(type(output))
+                    print(output.shape)
                     
                     label_num[target_frame] = len(out_img[out_img>0])
                     output_file = os.path.join(output_folder, '%s.png' % str(target_frame).zfill(5))
@@ -149,27 +143,39 @@ def dynamic_refers(videoname='drift-straight'):
                     f.write(str(target_frame).zfill(2) + ': ' + str(IoU)+','+str(ratio)+','+str(l_num)\
                         +','+str(s_num)+'\n')
                     
+                    flag = False
                     if IoU > 0.9 and 1.05 > ratio and ratio > 0.9:
                         print('#############')
-                        ref_index = long_ref_index
-                    elif IoU < 0.4:
-                        print('IoU<0.4重新选择参考帧')
+                        ref_index = long_ref_index + long_ref_index+[target_frame-3]
+                    elif IoU < 0.6:
+                        print('IoU<0.6重新选择参考帧')
                         for i in range(0, target_frame - 6):
                             tmp = [i]
                             dil = min(target_frame-long_ref_index[0]-1,15)
                             long_out_img, _ = get_anno_by_ref(model, outputs, images_rgb, tmp, target_frame, dil)
                             IoU_n, ratio_n, l_num_n, s_num_n = quality_of_long_memory(long_out_img, short_out_img)
                             dev = np.abs(IoU - ratio_n)
-                            if IoU_n > IoU and ratio_n > 0.8 and ratio_n < 1.1 and np.abs(IoU_n-ratio_n) < dev:
+                            if IoU_n > IoU and ratio_n > 0.6 and ratio_n < 1.1 and np.abs(IoU_n-ratio_n) < dev:
+                                IoU = IoU_n
+                                ratio = ratio_n
                                 dev = np.abs(IoU_n-ratio_n)
                                 print('new IoU ', IoU_n)
                                 long_ref_index = [i]
                                 # output_file = os.path.join(output_folder, 'long_%s.png' % str(target_frame).zfill(5))
                                 # imwrite_indexed(output_file, long_tmp_img)
-                                ref_index = long_ref_index + short_ref_index
-                    elif 0.9> IoU and IoU > 0.6 and ratio > 0.9:
-                        # 有一定重合但是很可能散布到了背景上
-                        print('grabcut')
+                                ref_index = long_ref_index + [target_frame-1, target_frame-3]
+                    # elif 0.7> IoU and IoU > 0.2 and ratio > 0.9:
+                    #     # 有一定重合但是很可能散布到了背景上
+                    #     print('grabcut: ', target_frame)
+                    #     img = plt.imread(TrainData[1][0][target_frame])
+                    #     mask_grab = myGrabcut.my_grabcut(img, long_out_img, short_out_img)
+                    #     print('mask_grab shape', mask_grab.shape)
+                    #     grab_output_file = os.path.join(output_folder, 'grab_%s.png' % str(target_frame).zfill(5))
+                    #     imwrite_indexed(grab_output_file, mask_grab)
+                        
+                    #     mask_grab_output = torch.Tensor(mask_grab)
+                    #     mask_grab_output = mask_grab_output.unsqueeze(0).unsqueeze(0)
+                    #     flag = True
                     
 
                     long_output_file = os.path.join(output_folder, 'long_%s.png' % str(target_frame).zfill(5))
@@ -178,10 +184,15 @@ def dynamic_refers(videoname='drift-straight'):
                     imwrite_indexed(short_output_file, short_out_img)
 
                     # 最终进行预测
-                    print(target_frame, ': ', ref_index)
-                    out_img, output = get_anno_by_ref(model, outputs, images_rgb, ref_index, target_frame, 15)
+                    if flag:
+                        print(target_frame, ' mask_grab')
+                        out_img = mask_grab
+                        output = mask_grab_output
+                    else:
+                        print(target_frame, ': ', ref_index)
+                        out_img, output = get_anno_by_ref(model, outputs, images_rgb, ref_index, target_frame, 15)
+                        
                     outputs.append(output)
-
                     label_num[target_frame] = len(out_img[out_img>0])
                     output_file = os.path.join(output_folder, '%s.png' % str(target_frame).zfill(5))
                     imwrite_indexed(output_file, out_img)
@@ -224,6 +235,10 @@ if __name__ == '__main__':
             #frame_arr = [0] + list(filter(lambda x: x > 0, range(tar-1, tar -1- mem_gap * 3, -mem_gap)))[::-1]
     #        get_next_anno(videoname=vn, frames=frame_arr, target_frame=tar)
     # for vn in vns:
-    dynamic_refers('goat')
+    dynamic_refers('shooting')
+    
+    # filepath = '/dataset/dusen/DAVIS/'
+    # TrainData = _dataloader(filepath, 'goat')
+    # print(TrainData[1][0][33])
 
     
