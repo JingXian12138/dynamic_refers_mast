@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-10-29 15:24:37
-LastEditTime: 2021-11-08 15:13:05
+LastEditTime: 2021-11-10 11:27:13
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: \GraphCut\img_cut.py
@@ -73,10 +73,10 @@ def blend_mask(long_m, short_m):
     return map
 
 if __name__ == '__main__':
-    img = plt.imread('./resource/drift-straight/00022.jpg')
+    img = plt.imread('./resource/shooting/00026.jpg')
     
-    long_m = read_annotation('./resource/drift-straight/long_00022.png')
-    short_m = read_annotation('./resource/drift-straight/short_00022.png')
+    long_m = read_annotation('./resource/shooting/long_00026.png')
+    short_m = read_annotation('./resource/shooting/short_00026.png')
     mask = my_grabcut(img, long_m, short_m)
     plt.figure()
     plt.imshow(mask)
