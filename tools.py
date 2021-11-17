@@ -1,16 +1,17 @@
 '''
 Author: your name
 Date: 2021-11-08 16:09:30
-LastEditTime: 2021-11-16 16:33:02
+LastEditTime: 2021-11-17 15:50:50
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: \dynamic_refers_mast\tools.py
 '''
 import numpy as np 
 from PIL import Image
+import matplotlib.pyplot as plt
 import os
-import torch
-import torch.nn.functional as F
+# import torch
+# import torch.nn.functional as F
 
 
 
@@ -40,7 +41,7 @@ def get_centroid(img, target=1):
     y = np.round(np.mean(yy)).astype(np.int32)
     return x, y
 
-def get_anno_by_ref(model, outputs, images_rgb, long_ref_index, target_frame, dil_int):
+def get_anno_by_ref(model, outputs, images_rgb, long_ref_index, target_frame, dil_int, dil=-1):
     
     pad =  ((0,0), (0,0))
     
@@ -72,5 +73,8 @@ def quality_of_long_memory(l_anno, s_anno):
 
 
 if __name__ == '__main__':
-    anno = read_annotation('./resource/short_00064.png')
-    get_centroid(anno, 1)
+    anno = read_annotation('./resource/shooting/long_00026.png')
+    plt.figure()
+    plt.imshow(anno)
+    plt.show()
+    # get_centroid(anno, 1)

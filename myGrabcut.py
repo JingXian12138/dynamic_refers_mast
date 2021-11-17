@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-10-29 15:24:37
-LastEditTime: 2021-11-10 11:27:13
+LastEditTime: 2021-11-17 15:06:50
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: \GraphCut\img_cut.py
@@ -25,6 +25,10 @@ def my_grabcut(img, long_m, short_m):
     fgdModel = np.zeros((1,65),np.float64)
     
     mask = blend_mask(long_m, short_m)
+
+    # plt.figure()
+    # plt.imshow(mask) 
+    # plt.show()
 
     mask, bgdModel, fgdModel = cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
     # print(fgdModel)
@@ -73,10 +77,12 @@ def blend_mask(long_m, short_m):
     return map
 
 if __name__ == '__main__':
-    img = plt.imread('./resource/shooting/00026.jpg')
+    img = plt.imread('./resource/car-roundabout/video/00060.jpg')
     
-    long_m = read_annotation('./resource/shooting/long_00026.png')
-    short_m = read_annotation('./resource/shooting/short_00026.png')
+    long_m = read_annotation('./resource/car-roundabout/00060.png')
+    short_m = read_annotation('./resource/car-roundabout/long_00060.png')
+    print(long_m.shape)
+    print(short_m.shape)
     mask = my_grabcut(img, long_m, short_m)
     plt.figure()
     plt.imshow(mask)

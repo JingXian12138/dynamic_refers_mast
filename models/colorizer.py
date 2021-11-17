@@ -47,7 +47,7 @@ class Colorizer(nn.Module):
 
         return x
 
-    def forward(self, feats_r, feats_t, quantized_r, ref_index, current_ind, dil_int = 15):
+    def forward(self, feats_r, feats_t, quantized_r, ref_index, current_ind, dil_int = 15, dil=-1):
         """
         Warp y_t to y_(t+n). Using similarity computed with im (t..t+n)
         :param feats_r: f([im1, im2, im3])
@@ -62,6 +62,10 @@ class Colorizer(nn.Module):
 
         # The maximum dilation rate is 4
         dirates = [ min(4, (current_ind - x) // dil_int +1) for x in ref_index if current_ind - x > dil_int]
+        # 根据质心调整空洞卷积的大小(主要用于预测长期记忆)
+        if dil > 0:
+            dirates = [dil]
+
         b,c,h,w = feats_t.size()
         N = self.P * self.P
         corrs = []

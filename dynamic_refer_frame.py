@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-10-31 14:49:11
-LastEditTime: 2021-11-16 16:33:06
+LastEditTime: 2021-11-17 16:10:42
 LastEditors: Please set LastEditors
 Description: 有机结合局部搜索和全局搜索
 FilePath: \dynamic_refers\dynamic_refer_frame.py
@@ -65,18 +65,29 @@ def dynamic_refers(videoname='drift-straight'):
         # 将第0帧的anno保存
         first_anno = os.path.join(output_folder, '%s.png' % str(0).zfill(5))
         pad =  ((0,0), (0,0))
+        _, _, h, w = annotations[0].size()
+        span = (np.sqrt(h*h+w*w)/8).astype(np.int32)
+        print('_______________span_________________', span)
+        
 
         # 统计每张图预测结果的标记个数(用于表示目标是否变大或者变小)
         length = len(images_rgb)
         label_num = np.zeros(length)
+        centroids = np.zeros((length,2))
+        centroids_long = np.zeros((length,2))
+        centroids_short = np.zeros((length,2))
         
-        if not os.path.exists(first_anno):
+        
+        #if not os.path.exists(first_anno):
             # output first mask
-            out_img = annotations[0][0, 0].cpu().numpy().astype(np.uint8)
+        out_img = annotations[0][0, 0].cpu().numpy().astype(np.uint8)
 
-            out_img = np.pad(out_img, pad, 'edge').astype(np.uint8)
-            label_num[0] = len(out_img[out_img>0])
-            imwrite_indexed(first_anno, out_img )
+        out_img = np.pad(out_img, pad, 'edge').astype(np.uint8)
+        label_num[0] = len(out_img[out_img>0])
+        cx, cy = tools.get_centroid(out_img, 1)
+        centroids[0][0] = cx 
+        centroids[0][1] = cy
+        imwrite_indexed(first_anno, out_img )
         
         
         
@@ -97,17 +108,38 @@ def dynamic_refers(videoname='drift-straight'):
                 
                     out_img, output = tools.get_anno_by_ref(model, outputs, images_rgb, ref_index, target_frame, 15)
                     outputs.append(output)
-                    print(type(output))
-                    print(output.shape)
-                    
+                    # 质心
+                    cx, cy = tools.get_centroid(out_img, 1)
+                    centroids[target_frame][0] = cx 
+                    centroids[target_frame][1] = cy
+
                     label_num[target_frame] = len(out_img[out_img>0])
                     output_file = os.path.join(output_folder, '%s.png' % str(target_frame).zfill(5))
                     imwrite_indexed(output_file, out_img)
                 else:
-                    # 长期记忆的结果
-                    long_out_img, _ = tools.get_anno_by_ref(model, outputs, images_rgb, long_ref_index, target_frame, min(target_frame-long_ref_index[0]-1,15))
                     # 短期记忆的结果
                     short_out_img, _ = tools.get_anno_by_ref(model, outputs, images_rgb, short_ref_index, target_frame, 15)
+                    # 质心
+                    cx_s, cy_s = tools.get_centroid(short_out_img, 1)
+                    centroids_short[target_frame][0] = cx_s 
+                    centroids_short[target_frame][1] = cy_s
+                    print('短期记忆的质心：(', cx_s, ',', cy_s,')')
+                    
+                    cx_o = centroids[long_ref_index[0]][0]
+                    cy_o = centroids[long_ref_index[0]][1]
+                    print('参考长期记忆的质心：(', cx_o, ',', cy_o,')')
+                    dil_sp = (np.sqrt((cx_s-cx_o)**2 + (cy_s-cy_o)**2) // span + 1).astype(np.int32)
+                    print('********: dil_sp', dil_sp)
+                    # 长期记忆的结果
+                    long_out_img, _ = tools.get_anno_by_ref(model, outputs, images_rgb, long_ref_index, target_frame, 15, dil_sp)
+                    # 质心
+                    cx, cy = tools.get_centroid(long_out_img, 1)
+                    centroids_long[target_frame][0] = cx 
+                    centroids_long[target_frame][1] = cy
+                    # print('长期记忆的质心：(', cx, ',', cy,')')
+
+                    
+
                     # 计算指标
                     IoU, ratio, l_num, s_num = tools.quality_of_long_memory(long_out_img, short_out_img)
                     print(target_frame, ': ',IoU, ratio, l_num, s_num)
@@ -162,6 +194,10 @@ def dynamic_refers(videoname='drift-straight'):
                     else:
                         print(target_frame, ': ', ref_index)
                         out_img, output = tools.get_anno_by_ref(model, outputs, images_rgb, ref_index, target_frame, 15)
+                        # 质心
+                        cx, cy = tools.get_centroid(out_img, 1)
+                        centroids[target_frame][0] = cx 
+                        centroids[target_frame][1] = cy
                         
                     outputs.append(output)
                     label_num[target_frame] = len(out_img[out_img>0])
@@ -169,6 +205,8 @@ def dynamic_refers(videoname='drift-straight'):
                     imwrite_indexed(output_file, out_img)
                     
         print(label_num)
+        # print('质心: ')
+        # print(centroids)
 
 
 
@@ -191,7 +229,7 @@ if __name__ == '__main__':
             #frame_arr = [0] + list(filter(lambda x: x > 0, range(tar-1, tar -1- mem_gap * 3, -mem_gap)))[::-1]
     #        get_next_anno(videoname=vn, frames=frame_arr, target_frame=tar)
     # for vn in vns:
-    dynamic_refers('shooting')
+    dynamic_refers('car-roundabout')
     
     # filepath = '/dataset/dusen/DAVIS/'
     # TrainData = tools.dataloader(filepath, 'goat')
