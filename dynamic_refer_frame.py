@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-10-31 14:49:11
-LastEditTime: 2021-11-17 17:33:55
+LastEditTime: 2021-11-17 21:38:11
 LastEditors: Please set LastEditors
 Description: 有机结合局部搜索和全局搜索
 FilePath: \dynamic_refers\dynamic_refer_frame.py
@@ -155,8 +155,8 @@ def dynamic_refers(videoname='drift-straight'):
                         for i in range(0, target_frame - 6):
                             tmp = [i]
                             dil = min(target_frame-long_ref_index[0]-1,15)
-                            long_out_img, _ = tools.get_anno_by_ref(model, outputs, images_rgb, tmp, target_frame, 1, [1])
-                            IoU_n, ratio_n, l_num_n, s_num_n = tools.quality_of_long_memory(long_out_img, short_out_img)
+                            long_out_img_t, _ = tools.get_anno_by_ref(model, outputs, images_rgb, tmp, target_frame, 1, [1])
+                            IoU_n, ratio_n, l_num_n, s_num_n = tools.quality_of_long_memory(long_out_img_t, short_out_img)
                             dev = np.abs(IoU - ratio_n)
                             if IoU_n > IoU and ratio_n > 0.6 and ratio_n < 1.1 and np.abs(IoU_n-ratio_n) < dev:
                                 IoU = IoU_n
@@ -167,6 +167,20 @@ def dynamic_refers(videoname='drift-straight'):
                                 # output_file = os.path.join(output_folder, 'long_%s.png' % str(target_frame).zfill(5))
                                 # imwrite_indexed(output_file, long_tmp_img)
                                 ref_index = long_ref_index + [target_frame-1, target_frame-3]
+                    
+                        # 对新的long_ref进行前背景分割
+                        print('grabcut: ', target_frame)
+                        img = plt.imread(TrainData[1][0][target_frame])
+                        
+                        mask_grab = myGrabcut.my_grabcut(img, long_out_img, short_out_img)
+                        print('mask_grab shape', mask_grab.shape)
+                        grab_output_file = os.path.join(output_folder, 'grab_%s.png' % str(target_frame).zfill(5))
+                        imwrite_indexed(grab_output_file, mask_grab)
+                        
+                        mask_grab_output = torch.Tensor(mask_grab)
+                        mask_grab_output = mask_grab_output.unsqueeze(0).unsqueeze(0)
+                        flag = True
+
                     # elif 0.7> IoU and IoU > 0.2 and ratio > 0.9:
                     #     # 有一定重合但是很可能散布到了背景上
                     #     print('grabcut: ', target_frame)
@@ -193,7 +207,7 @@ def dynamic_refers(videoname='drift-straight'):
                         output = mask_grab_output
                     else:
                         print(target_frame, ': ', ref_index)
-                        out_img, output = tools.get_anno_by_ref(model, outputs, images_rgb, ref_index, target_frame, 1, [1])
+                        out_img, output = tools.get_anno_by_ref(model, outputs, images_rgb, ref_index, target_frame, 1, [3])
                         # 质心
                         cx, cy = tools.get_centroid(out_img, 1)
                         centroids[target_frame][0] = cx 
@@ -234,5 +248,6 @@ if __name__ == '__main__':
     # filepath = '/dataset/dusen/DAVIS/'
     # TrainData = tools.dataloader(filepath, 'goat')
     # print(TrainData[1][0][33])
+
 
     
