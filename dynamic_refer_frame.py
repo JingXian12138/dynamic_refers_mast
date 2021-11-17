@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-10-31 14:49:11
-LastEditTime: 2021-11-17 16:10:42
+LastEditTime: 2021-11-17 17:33:55
 LastEditors: Please set LastEditors
 Description: 有机结合局部搜索和全局搜索
 FilePath: \dynamic_refers\dynamic_refer_frame.py
@@ -106,7 +106,7 @@ def dynamic_refers(videoname='drift-straight'):
                 
                 if target_frame < 5:
                 
-                    out_img, output = tools.get_anno_by_ref(model, outputs, images_rgb, ref_index, target_frame, 15)
+                    out_img, output = tools.get_anno_by_ref(model, outputs, images_rgb, ref_index, target_frame, 1, [1])
                     outputs.append(output)
                     # 质心
                     cx, cy = tools.get_centroid(out_img, 1)
@@ -118,7 +118,7 @@ def dynamic_refers(videoname='drift-straight'):
                     imwrite_indexed(output_file, out_img)
                 else:
                     # 短期记忆的结果
-                    short_out_img, _ = tools.get_anno_by_ref(model, outputs, images_rgb, short_ref_index, target_frame, 15)
+                    short_out_img, _ = tools.get_anno_by_ref(model, outputs, images_rgb, short_ref_index, target_frame, 0)
                     # 质心
                     cx_s, cy_s = tools.get_centroid(short_out_img, 1)
                     centroids_short[target_frame][0] = cx_s 
@@ -131,7 +131,7 @@ def dynamic_refers(videoname='drift-straight'):
                     dil_sp = (np.sqrt((cx_s-cx_o)**2 + (cy_s-cy_o)**2) // span + 1).astype(np.int32)
                     print('********: dil_sp', dil_sp)
                     # 长期记忆的结果
-                    long_out_img, _ = tools.get_anno_by_ref(model, outputs, images_rgb, long_ref_index, target_frame, 15, dil_sp)
+                    long_out_img, _ = tools.get_anno_by_ref(model, outputs, images_rgb, long_ref_index, target_frame, 1, [dil_sp])
                     # 质心
                     cx, cy = tools.get_centroid(long_out_img, 1)
                     centroids_long[target_frame][0] = cx 
@@ -155,7 +155,7 @@ def dynamic_refers(videoname='drift-straight'):
                         for i in range(0, target_frame - 6):
                             tmp = [i]
                             dil = min(target_frame-long_ref_index[0]-1,15)
-                            long_out_img, _ = tools.get_anno_by_ref(model, outputs, images_rgb, tmp, target_frame, dil)
+                            long_out_img, _ = tools.get_anno_by_ref(model, outputs, images_rgb, tmp, target_frame, 1, [1])
                             IoU_n, ratio_n, l_num_n, s_num_n = tools.quality_of_long_memory(long_out_img, short_out_img)
                             dev = np.abs(IoU - ratio_n)
                             if IoU_n > IoU and ratio_n > 0.6 and ratio_n < 1.1 and np.abs(IoU_n-ratio_n) < dev:
@@ -193,7 +193,7 @@ def dynamic_refers(videoname='drift-straight'):
                         output = mask_grab_output
                     else:
                         print(target_frame, ': ', ref_index)
-                        out_img, output = tools.get_anno_by_ref(model, outputs, images_rgb, ref_index, target_frame, 15)
+                        out_img, output = tools.get_anno_by_ref(model, outputs, images_rgb, ref_index, target_frame, 1, [1])
                         # 质心
                         cx, cy = tools.get_centroid(out_img, 1)
                         centroids[target_frame][0] = cx 
