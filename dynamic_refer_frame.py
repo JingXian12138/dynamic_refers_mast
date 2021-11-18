@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-10-31 14:49:11
-LastEditTime: 2021-11-17 22:18:08
+LastEditTime: 2021-11-18 17:13:46
 LastEditors: Please set LastEditors
 Description: 有机结合局部搜索和全局搜索
 FilePath: \dynamic_refers\dynamic_refer_frame.py
@@ -66,7 +66,7 @@ def dynamic_refers(videoname='drift-straight'):
         first_anno = os.path.join(output_folder, '%s.png' % str(0).zfill(5))
         pad =  ((0,0), (0,0))
         _, _, h, w = annotations[0].size()
-        span = (np.sqrt(h*h+w*w)/8).astype(np.int32)
+        span = (np.sqrt(h*h+w*w)/4).astype(np.int32)
         print('_______________span_________________', span)
         
 
@@ -152,6 +152,7 @@ def dynamic_refers(videoname='drift-straight'):
                         ref_index = long_ref_index + long_ref_index + [target_frame-3]
                     elif IoU < 0.6:
                         print('IoU<0.6重新选择参考帧')
+                        flag_new_ref = False
                         for i in range(0, target_frame - 6):
                             tmp = [i]
                             dil = min(target_frame-long_ref_index[0]-1,15)
@@ -163,23 +164,27 @@ def dynamic_refers(videoname='drift-straight'):
                                 ratio = ratio_n
                                 dev = np.abs(IoU_n-ratio_n)
                                 print('new IoU ', IoU_n)
+                                flag_new_ref = True 
                                 long_ref_index = [i]
                                 # output_file = os.path.join(output_folder, 'long_%s.png' % str(target_frame).zfill(5))
                                 # imwrite_indexed(output_file, long_tmp_img)
                                 ref_index = long_ref_index + [target_frame-1, target_frame-3]
-                    
-                        # 对新的long_ref进行前背景分割
-                        print('grabcut: ', target_frame)
-                        img = plt.imread(TrainData[1][0][target_frame])
-                        
-                        mask_grab = myGrabcut.my_grabcut(img, long_out_img, short_out_img)
-                        print('mask_grab shape', mask_grab.shape)
-                        grab_output_file = os.path.join(output_folder, 'grab_%s.png' % str(target_frame).zfill(5))
-                        imwrite_indexed(grab_output_file, mask_grab)
-                        
-                        mask_grab_output = torch.Tensor(mask_grab)
-                        mask_grab_output = mask_grab_output.unsqueeze(0).unsqueeze(0)
-                        flag = True
+                        if flag_new_ref:
+                            # 对新的long_ref进行前背景分割
+                            print('grabcut: ', target_frame)
+                            img = plt.imread(TrainData[1][0][target_frame])
+                            
+                            mask_grab = myGrabcut.my_grabcut(img, long_out_img, short_out_img)
+                            print('mask_grab shape', mask_grab.shape)
+                            grab_output_file = os.path.join(output_folder, 'grab_%s.png' % str(target_frame).zfill(5))
+                            imwrite_indexed(grab_output_file, mask_grab)
+                            
+                            mask_grab_output = torch.Tensor(mask_grab)
+                            mask_grab_output = mask_grab_output.unsqueeze(0).unsqueeze(0)
+                            flag = True
+                        else:
+                            # 没有找到新的合适的参考帧
+                            ref_index = [target_frame-3, target_frame-1]
 
                         # tar = long_ref_index[0]
                         # img_l = plt.imread(TrainData[1][0][target_frame])
@@ -214,6 +219,7 @@ def dynamic_refers(videoname='drift-straight'):
                     imwrite_indexed(short_output_file, short_out_img)
 
                     # 最终进行预测
+                    # 如果后面预测的帧用到了经过grabcut后的帧，那么dil_int建议用大一点
                     if flag:
                         print(target_frame, ' mask_grab')
                         out_img = mask_grab
@@ -225,8 +231,9 @@ def dynamic_refers(videoname='drift-straight'):
                         cx, cy = tools.get_centroid(out_img, 1)
                         centroids[target_frame][0] = cx 
                         centroids[target_frame][1] = cy
-                        
+                    
                     outputs.append(output)
+                    # print('len(outputs)',len(outputs))
                     label_num[target_frame] = len(out_img[out_img>0])
                     output_file = os.path.join(output_folder, '%s.png' % str(target_frame).zfill(5))
                     imwrite_indexed(output_file, out_img)
@@ -256,7 +263,7 @@ if __name__ == '__main__':
             #frame_arr = [0] + list(filter(lambda x: x > 0, range(tar-1, tar -1- mem_gap * 3, -mem_gap)))[::-1]
     #        get_next_anno(videoname=vn, frames=frame_arr, target_frame=tar)
     # for vn in vns:
-    dynamic_refers('car-roundabout')
+    dynamic_refers('drift-chicane')
     
     # filepath = '/dataset/dusen/DAVIS/'
     # TrainData = tools.dataloader(filepath, 'goat')

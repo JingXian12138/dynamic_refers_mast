@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-10-29 15:24:37
-LastEditTime: 2021-11-17 20:55:41
+LastEditTime: 2021-11-18 15:17:52
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: \GraphCut\img_cut.py
@@ -76,11 +76,32 @@ def blend_mask(long_m, short_m):
     map[tmp_index] = 3
     return map
 
-if __name__ == '__main__':
-    img = plt.imread('./resource/car-roundabout/video/00062.jpg')
+
+# def new_grabcut(img, long_m, short_m, another_lm):
+#     bgdModel = np.zeros((1,65),np.float64)
+#     fgdModel = np.zeros((1,65),np.float64)
     
-    long_m = read_annotation('./resource/car-roundabout/long_00062.png')
-    short_m = read_annotation('./resource/car-roundabout/short_00062.png')
+
+# def new_blend_mask(long_m, short_m, another_lm):
+#     index_s = short_m > 0
+#     index_l = long_m > 0
+#     index_al = another_lm > 0
+
+#     map = np.zeros_like(short_m).astype(np.uint8)
+#     ind1 = index_l & index_s & index_al# 长短记忆的重合部分为前景
+#     ind2 = (index_l & (~ind1)) # 长记忆不与短记忆重合的部分为可能背景
+#     ind3 = (index_s & (~ind1)) # 短记忆不与长记忆重合的部分为可能前景
+    
+#     map[ind1] = 1 # 前景
+#     map[ind2] = 2 # 可能背景
+#     map[ind3] = 3 # 可能前景
+
+
+if __name__ == '__main__':
+    img = plt.imread('./resource/car-shadow/video/00021.jpg')
+    
+    long_m = read_annotation('./resource/car-shadow/long_00021.png')
+    short_m = read_annotation('./resource/car-shadow/short_00021.png')
     print(long_m.shape)
     print(short_m.shape)
     mask = my_grabcut(img, long_m, short_m)
