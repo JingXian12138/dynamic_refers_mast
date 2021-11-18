@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-10-31 14:49:11
-LastEditTime: 2021-11-17 21:38:11
+LastEditTime: 2021-11-17 22:18:08
 LastEditors: Please set LastEditors
 Description: 有机结合局部搜索和全局搜索
 FilePath: \dynamic_refers\dynamic_refer_frame.py
@@ -180,6 +180,19 @@ def dynamic_refers(videoname='drift-straight'):
                         mask_grab_output = torch.Tensor(mask_grab)
                         mask_grab_output = mask_grab_output.unsqueeze(0).unsqueeze(0)
                         flag = True
+
+                        # tar = long_ref_index[0]
+                        # img_l = plt.imread(TrainData[1][0][target_frame])
+                        # long_out_img_l, _ = tools.get_anno_by_ref(model, outputs, images_rgb, [0], tar, 1, [1])
+                        # short_out_img_l, _ = tools.get_anno_by_ref(model, outputs, images_rgb, [tar-1,tar-3,tar-5], tar, 0, [1])
+                        # mask_grab_l = myGrabcut.my_grabcut(img_l, long_out_img_l, short_out_img_l)
+                        # print('mask_grab shape_l', mask_grab_l.shape)
+                        # grab_output_file = os.path.join(output_folder, 'grab_%s.png' % str(tar).zfill(5))
+                        # imwrite_indexed(grab_output_file, mask_grab_l)
+                        # mask_grab_output_l = torch.Tensor(mask_grab_l)
+                        # mask_grab_output_l = mask_grab_output_l.unsqueeze(0).unsqueeze(0)
+                        # outputs[tar] = mask_grab_output_l
+
 
                     # elif 0.7> IoU and IoU > 0.2 and ratio > 0.9:
                     #     # 有一定重合但是很可能散布到了背景上
